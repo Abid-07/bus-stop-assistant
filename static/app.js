@@ -103,11 +103,11 @@ function requestLocation() {
     bar.innerHTML = `<span class="status error">Geolocation is not supported by your browser.</span>`;
     return;
   }
-  bar.innerHTML = `<span class="status">📡 Getting location…</span>`;
+  bar.innerHTML = `<span class="status">Getting location…</span>`;
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       state.coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-      bar.innerHTML = `<span class="status ok">📍 ${state.coords.lat.toFixed(5)}, ${state.coords.lon.toFixed(5)}</span>`;
+      bar.innerHTML = `<span class="status ok">${state.coords.lat.toFixed(5)}, ${state.coords.lon.toFixed(5)}</span>`;
       renderAll();
       refreshNearby();
     },
@@ -173,7 +173,7 @@ function renderArrivalBoard(containerId, stopName) {
   container.innerHTML = `
     <div class="board-header">
       <h2>${escapeHtml(stopName)}</h2>
-      <button class="refresh-btn" id="${containerId}-refresh-btn">🔄 Refresh</button>
+      <button class="refresh-btn" id="${containerId}-refresh-btn">Refresh</button>
     </div>
     ${
       allLines.length > 0
@@ -236,11 +236,61 @@ function renderBoards() {
   }
 }
 
+function renderStopList(items, { container, selectedId, nearestId, showDistance, showRemove, allowAdd, listLookup, onSelect, onAdd, onRemove }) {
+  if (items.length === 0) {
+    container.innerHTML = `<p class="empty-msg">No favourite stops yet. Search and add stops above.</p>`;
+    return;
+  }
+
+  container.innerHTML = items
+    .map((stop) => {
+      const classes = [selectedId === stop.id ? "selected" : "", nearestId === stop.id ? "nearest" : ""]
+        .filter(Boolean)
+        .join(" ");
+
+      const direction = stop.towards ? `<span class="stop-towards">${stop.distanceMeters !== undefined ? "" : "→ "}${escapeHtml(stop.towards)}</span>` : "";
+      const distance = showDistance && stop.distanceMeters !== undefined ? `<span class="stop-distance">${formatDistance(stop.distanceMeters)}</span>` : "";
+      const nearestBadge = nearestId === stop.id ? `<span class="nearest-badge">Nearest</span>` : "";
+      const addButton = allowAdd
+        ? `<button class="add-btn" data-fav-id="${escapeHtml(stop.id)}" ${isFavorite(stop.id) ? "disabled" : ""}>${isFavorite(stop.id) ? "Added" : "Add"}</button>`
+        : "";
+      const removeButton = showRemove
+        ? `<button class="remove-btn" data-remove-id="${escapeHtml(stop.id)}" aria-label="Remove ${escapeHtml(stop.name)}">Remove</button>`
+        : "";
+
+      return `<li class="${classes}">
+        <button class="stop-btn" data-id="${escapeHtml(stop.id)}">
+          <span class="stop-name">${escapeHtml(stop.name)}</span>
+          ${direction}
+          ${nearestBadge}
+          ${distance}
+        </button>
+        ${addButton}${removeButton}
+      </li>`;
+    })
+    .join("");
+
+  container.querySelectorAll(".stop-btn").forEach((btn) =>
+    btn.addEventListener("click", () => onSelect(listLookup.find((stop) => stop.id === btn.dataset.id)))
+  );
+
+  if (allowAdd) {
+    container.querySelectorAll(".add-btn").forEach((btn) =>
+      btn.addEventListener("click", () => onAdd(listLookup.find((stop) => stop.id === btn.dataset.favId)))
+    );
+  }
+
+  if (showRemove) {
+    container.querySelectorAll(".remove-btn").forEach((btn) =>
+      btn.addEventListener("click", () => onRemove(btn.dataset.removeId))
+    );
+  }
+}
+
 // ---------- nearby ----------
 
 async function refreshNearby() {
   if (!state.coords) return;
-  const list = document.getElementById("nearby-list");
   try {
     state.nearbyStops = await apiNearby(state.coords.lat, state.coords.lon, state.radiusMetres);
     state.nearbyError = null;
@@ -263,33 +313,21 @@ function renderNearby() {
   } else if (state.nearbyStops.length === 0) {
     list.innerHTML = `<p class="empty-msg">No bus stops found within ${formatDistance(state.radiusMetres)}. Try a larger radius.</p>`;
   } else {
-    list.innerHTML = state.nearbyStops
-      .map(
-        (stop) => `<li class="${state.selectedStop?.id === stop.id ? "selected" : ""}">
-          <button class="stop-btn" data-id="${escapeHtml(stop.id)}">
-            <span class="stop-name">${escapeHtml(stop.name)}</span>
-            ${stop.towards ? `<span class="stop-towards">${escapeHtml(stop.towards)}</span>` : ""}
-            <span class="stop-distance">📍 ${formatDistance(stop.distanceMeters)}</span>
-          </button>
-          <button class="add-btn" data-fav-id="${escapeHtml(stop.id)}" ${isFavorite(stop.id) ? "disabled" : ""}>
-            ${isFavorite(stop.id) ? "✓ Added" : "+ Add"}
-          </button>
-        </li>`
-      )
-      .join("");
-    list.querySelectorAll(".stop-btn").forEach((btn) =>
-      btn.addEventListener("click", () => {
-        const stop = state.nearbyStops.find((s) => s.id === btn.dataset.id);
+    renderStopList(state.nearbyStops, {
+      container: list,
+      selectedId: state.selectedStop?.id,
+      nearestId: null,
+      showDistance: true,
+      showRemove: false,
+      allowAdd: true,
+      listLookup: state.nearbyStops,
+      onSelect: (stop) => {
         selectStop(stop);
         setTab("nearby");
-      })
-    );
-    list.querySelectorAll(".add-btn").forEach((btn) =>
-      btn.addEventListener("click", () => {
-        const stop = state.nearbyStops.find((s) => s.id === btn.dataset.favId);
-        addFavorite(stop);
-      })
-    );
+      },
+      onAdd: (stop) => addFavorite(stop),
+      onRemove: () => undefined,
+    });
   }
   renderBoards();
 }
@@ -303,35 +341,22 @@ function renderFavoritesList(containerId, { showRemove }) {
     container.innerHTML = `<p class="empty-msg">No favourite stops yet. Search and add stops above.</p>`;
     return;
   }
-  container.innerHTML = state.favorites
-    .map((stop) => {
-      const classes = [
-        state.selectedStop?.id === stop.id ? "selected" : "",
-        nearest?.id === stop.id ? "nearest" : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-      return `<li class="${classes}">
-        <button class="stop-btn" data-id="${escapeHtml(stop.id)}">
-          <span class="stop-name">${escapeHtml(stop.name)}</span>
-          ${stop.towards ? `<span class="stop-towards">→ ${escapeHtml(stop.towards)}</span>` : ""}
-          ${nearest?.id === stop.id ? `<span class="nearest-badge">📍 Nearest</span>` : ""}
-        </button>
-        ${showRemove ? `<button class="remove-btn" data-remove-id="${escapeHtml(stop.id)}" aria-label="Remove ${escapeHtml(stop.name)}">✕</button>` : ""}
-      </li>`;
-    })
-    .join("");
 
-  container.querySelectorAll(".stop-btn").forEach((btn) =>
-    btn.addEventListener("click", () => {
-      const stop = state.favorites.find((s) => s.id === btn.dataset.id);
+  renderStopList(state.favorites, {
+    container,
+    selectedId: state.selectedStop?.id,
+    nearestId: nearest?.id,
+    showDistance: false,
+    showRemove,
+    allowAdd: false,
+    listLookup: state.favorites,
+    onSelect: (stop) => {
       selectStop(stop);
       setTab("arrivals");
-    })
-  );
-  container.querySelectorAll(".remove-btn").forEach((btn) =>
-    btn.addEventListener("click", () => removeFavorite(btn.dataset.removeId))
-  );
+    },
+    onAdd: () => undefined,
+    onRemove: (id) => removeFavorite(id),
+  });
 }
 
 async function handleSearch() {
@@ -358,7 +383,7 @@ async function handleSearch() {
             <code class="stop-id">${escapeHtml(stop.id)}</code>
           </div>
           <button class="add-btn" data-id="${escapeHtml(stop.id)}" ${isFavorite(stop.id) ? "disabled" : ""}>
-            ${isFavorite(stop.id) ? "✓ Added" : "+ Add"}
+            ${isFavorite(stop.id) ? "Added" : "Add"}
           </button>
         </li>`
       )
@@ -397,9 +422,16 @@ function renderAll() {
   document.getElementById("arrivals-onboarding").hidden = state.favorites.length > 0;
   document.getElementById("arrivals-content").hidden = state.favorites.length === 0;
 
-  const nearest = nearestFavorite();
-  const activeStop = state.selectedStop ?? nearest;
-  if (activeStop && !state.selectedStop) selectStop(activeStop);
+  if (!state.selectedStop) {
+    const nearest = nearestFavorite();
+    if (nearest) {
+      state.selectedStop = nearest;
+      state.selectedLines = [];
+      clearInterval(state.arrivalsTimer);
+      fetchArrivals();
+      state.arrivalsTimer = setInterval(fetchArrivals, REFRESH_INTERVAL_MS);
+    }
+  }
 
   renderFavoritesList("favorites-list-arrivals", { showRemove: false });
   renderFavoritesList("favorites-list-favorites", { showRemove: true });

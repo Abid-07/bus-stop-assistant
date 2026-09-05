@@ -1,10 +1,17 @@
 """Thin async client for the TfL (Transport for London) public API."""
 
 import math
+import os
 
 import httpx
 
 TFL_BASE = "https://api.tfl.gov.uk"
+
+
+def _auth_params() -> dict:
+    """Adds the TfL subscription key (from TFL_APP_KEY) to raise the rate limit, if set."""
+    app_key = os.environ.get("TFL_APP_KEY")
+    return {"app_key": app_key} if app_key else {}
 
 
 def haversine_distance_metres(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -22,7 +29,7 @@ async def search_bus_stops(query: str) -> list[dict]:
     async with httpx.AsyncClient() as client:
         res = await client.get(
             f"{TFL_BASE}/StopPoint/Search/{query}",
-            params={"modes": "bus", "maxResults": 10},
+            params={"modes": "bus", "maxResults": 10, **_auth_params()},
         )
         res.raise_for_status()
         data = res.json()
@@ -49,6 +56,7 @@ async def search_nearby_bus_stops(lat: float, lon: float, radius_metres: float) 
                 "lon": lon,
                 "radius": round(radius_metres),
                 "stopTypes": "NaptanPublicBusCoachTram",
+                **_auth_params(),
             },
         )
         res.raise_for_status()
@@ -77,7 +85,7 @@ async def search_nearby_bus_stops(lat: float, lon: float, radius_metres: float) 
 async def get_arrivals(stop_id: str) -> list[dict]:
     """Live arrival predictions for a stop, sorted soonest first."""
     async with httpx.AsyncClient() as client:
-        res = await client.get(f"{TFL_BASE}/StopPoint/{stop_id}/Arrivals")
+        res = await client.get(f"{TFL_BASE}/StopPoint/{stop_id}/Arrivals", params=_auth_params())
         res.raise_for_status()
         data = res.json()
 

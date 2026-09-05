@@ -2,10 +2,13 @@
 
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from app.tfl_client import get_arrivals, search_bus_stops, search_nearby_bus_stops
+
+load_dotenv()
 
 app = FastAPI(title="Bus Stop Assistant")
 

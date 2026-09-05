@@ -9,58 +9,52 @@
   <body>
     <div class="app">
       <header class="app-header">
-        <h1>🚌 London Bus Stop Assistant</h1>
+        <h1>London Bus Stop Assistant</h1>
         <div class="location-bar" id="location-bar"></div>
       </header>
 
       <nav class="tabs">
-        <button class="tab-btn active" data-tab="arrivals">🕐 Arrivals</button>
-        <button class="tab-btn" data-tab="nearby">📍 Nearby</button>
-        <button class="tab-btn" data-tab="favorites">⭐ Favourites (<span id="fav-count">0</span>)</button>
+        <button class="tab-btn active" data-tab="arrivals">Arrivals</button>
+        <button class="tab-btn" data-tab="nearby">Nearby</button>
+        <button class="tab-btn" data-tab="favorites">Favourites (<span id="fav-count">0</span>)</button>
       </nav>
 
-      <main class="app-main">
-        <section id="tab-arrivals" class="tab-panel active">
-          <div id="arrivals-onboarding" class="onboarding" hidden>
-            <p>Add your favourite bus stops in the <button class="link-btn" data-goto="favorites">Favourites</button> tab to see live arrivals.</p>
-          </div>
-          <div id="arrivals-content" hidden>
-            <h2 class="section-title">Your Favourite Stops</h2>
-            <ul id="favorites-list-arrivals" class="stop-list"></ul>
-            <div id="arrival-board-arrivals" class="board-container"></div>
-          </div>
-        </section>
+      <section id="tab-arrivals" class="tab-panel active">
+        <div id="arrivals-onboarding" class="onboarding" hidden>
+          <p>Add your favourite bus stops in the <button class="link-btn" data-goto="favorites">Favourites</button> tab to see live arrivals.</p>
+        </div>
+        <div id="arrivals-content" hidden>
+          <h2 class="section-title">Your Favourite Stops</h2>
+          <ul id="favorites-list-arrivals" class="stop-list"></ul>
+          <div id="arrival-board-arrivals" class="board-container"></div>
+        </div>
+      </section>
 
-        <section id="tab-nearby" class="tab-panel">
-          <h2 class="section-title">Bus Stops Near You</h2>
-          <div id="nearby-onboarding" class="onboarding" hidden>
-            <p>We need your location to find nearby bus stops. <button class="link-btn" id="enable-location-btn">Enable location</button></p>
+      <section id="tab-nearby" class="tab-panel">
+        <div id="nearby-onboarding" class="onboarding" hidden>
+          <p>We need your location to find nearby bus stops. <button class="link-btn" id="enable-location-btn">Enable location</button></p>
+        </div>
+        <div id="nearby-content" hidden>
+          <div class="radius-row">
+            <label for="radius-input">Search radius:</label>
+            <input type="range" id="radius-input" min="100" max="2000" step="100" value="800" />
+            <span class="radius-value" id="radius-value">800 m</span>
+            <button class="refresh-btn" id="refresh-nearby-btn">Refresh</button>
           </div>
-          <div id="nearby-content" hidden>
-            <div class="radius-row">
-              <label for="radius-input">Search radius:</label>
-              <input type="range" id="radius-input" min="100" max="2000" step="100" value="800" />
-              <span class="radius-value" id="radius-value">800 m</span>
-              <button class="refresh-btn" id="refresh-nearby-btn">🔄 Refresh</button>
-            </div>
-            <ul id="nearby-list" class="stop-list"></ul>
-            <div id="arrival-board-nearby" class="board-container"></div>
-          </div>
-        </section>
+          <ul id="nearby-list" class="stop-list"></ul>
+          <div id="arrival-board-nearby" class="board-container"></div>
+        </div>
+      </section>
 
-        <section id="tab-favorites" class="tab-panel">
-          <h2 class="section-title">Add Favourite Bus Stops</h2>
-          <div class="search-row">
-            <input type="text" id="search-input" placeholder="Search bus stop (e.g. Canary Wharf)" />
-            <button id="search-btn">Search</button>
-          </div>
-          <p class="error" id="search-error" hidden></p>
-          <ul id="search-results" class="stop-list"></ul>
-
-          <h2 class="section-title">Saved Favourites</h2>
-          <ul id="favorites-list-favorites" class="stop-list"></ul>
-        </section>
-      </main>
+      <section id="tab-favorites" class="tab-panel">
+        <div class="search-row">
+          <input type="text" id="search-input" placeholder="Search bus stop (e.g. Canary Wharf)" />
+          <button id="search-btn">Search</button>
+        </div>
+        <p class="error" id="search-error" hidden></p>
+        <ul id="search-results" class="stop-list"></ul>
+        <ul id="favorites-list-favorites" class="stop-list"></ul>
+      </section>
     </div>
 
     <script src="/app.js"></script>
